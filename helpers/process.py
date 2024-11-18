@@ -44,8 +44,7 @@ def process_video(
         raise RuntimeError(f"Failed to open video file: {input_path}")
     out = init_video_writer(cap, output_path)
 
-    # LLIE_onnx_model = init_llie_onnx_model(model_llie_onnx_path)
-    LLIE_onnx_model = None
+    LLIE_onnx_model = init_llie_onnx_model(model_llie_onnx_path)
     YOLO_model = init_pose_model(model_pose_path)
 
     try:

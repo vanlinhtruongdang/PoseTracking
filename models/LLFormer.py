@@ -2,6 +2,7 @@
 ## Tao Wang, Kaihao Zhang, Tianrun Shen, Wenhan Luo, Bjorn Stenger, Tong Lu
 ## https://arxiv.org/pdf/2212.11548.pdf
 
+from collections import OrderedDict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -81,12 +82,8 @@ class NextAttentionImplZ(nn.Module):
         self.num_dims = num_dims
         self.num_heads = num_heads
         self.q1 = nn.Conv2d(num_dims, num_dims * 3, kernel_size=1, bias=bias)
-        self.q2 = nn.Conv2d(
-            num_dims * 3, num_dims * 3, kernel_size=3, padding=1, groups=num_dims * 3, bias=bias
-        )
-        self.q3 = nn.Conv2d(
-            num_dims * 3, num_dims * 3, kernel_size=3, padding=1, groups=num_dims * 3, bias=bias
-        )
+        self.q2 = nn.Conv2d(num_dims * 3, num_dims * 3, kernel_size=3, padding=1, groups=num_dims * 3, bias=bias)
+        self.q3 = nn.Conv2d(num_dims * 3, num_dims * 3, kernel_size=3, padding=1, groups=num_dims * 3, bias=bias)
 
         self.fac = nn.Parameter(torch.ones(1))
         self.fin = nn.Conv2d(num_dims, num_dims, kernel_size=1, bias=bias)
@@ -96,9 +93,7 @@ class NextAttentionImplZ(nn.Module):
         # x: [n, c, h, w]
         n, c, h, w = x.size()
         n_heads, dim_head = self.num_heads, c // self.num_heads
-        reshape = lambda x: einops.rearrange(
-            x, "n (nh dh) h w -> (n nh h) w dh", nh=n_heads, dh=dim_head
-        )
+        reshape = lambda x: einops.rearrange(x, "n (nh dh) h w -> (n nh h) w dh", nh=n_heads, dh=dim_head)
 
         qkv = self.q3(self.q2(self.q1(x)))
         q, k, v = map(reshape, qkv.chunk(3, dim=1))
@@ -111,9 +106,7 @@ class NextAttentionImplZ(nn.Module):
         res = torch.softmax(res, dim=-1)
 
         res = torch.matmul(res, v)
-        res = einops.rearrange(
-            res, "(n nh h) w dh -> n (nh dh) h w", nh=n_heads, dh=dim_head, n=n, h=h
-        )
+        res = einops.rearrange(res, "(n nh h) w dh -> n (nh dh) h w", nh=n_heads, dh=dim_head, n=n, h=h)
         res = self.fin(res)
 
         return res
@@ -172,9 +165,7 @@ class FeedForward(nn.Module):
 
 ######  Axis-based Transformer Block
 class TransformerBlock(nn.Module):
-    def __init__(
-        self, dim, num_heads=1, ffn_expansion_factor=2.66, bias=True, LayerNorm_type="WithBias"
-    ):
+    def __init__(self, dim, num_heads=1, ffn_expansion_factor=2.66, bias=True, LayerNorm_type="WithBias"):
         super(TransformerBlock, self).__init__()
 
         self.norm1 = LayerNorm(dim, LayerNorm_type)
@@ -302,12 +293,12 @@ class LLFormer(nn.Module):
         LayerNorm_type="WithBias",
         attention=True,
         skip=False,
+        weights=None,
+        device=None,
     ):
         super(LLFormer, self).__init__()
 
-        self.coefficient = nn.Parameter(
-            torch.Tensor(np.ones((4, 2, int(int(dim * 2 * 4))))), requires_grad=attention
-        )
+        self.coefficient = nn.Parameter(torch.Tensor(np.ones((4, 2, int(int(dim * 2 * 4))))), requires_grad=attention)
 
         self.patch_embed = OverlapPatchEmbed(inp_channels, dim)
 
@@ -465,26 +456,14 @@ class LLFormer(nn.Module):
         )
         self.up2_0 = Upsample(int(dim * 2))  ## From Level 1 to Level 0
         ### skip connection wit weights
-        self.coefficient_4_3 = nn.Parameter(
-            torch.Tensor(np.ones((2, int(int(dim * 2 * 4))))), requires_grad=attention
-        )
-        self.coefficient_3_2 = nn.Parameter(
-            torch.Tensor(np.ones((2, int(int(dim * 2 * 2))))), requires_grad=attention
-        )
-        self.coefficient_2_1 = nn.Parameter(
-            torch.Tensor(np.ones((2, int(int(dim * 2))))), requires_grad=attention
-        )
-        self.coefficient_1_0 = nn.Parameter(
-            torch.Tensor(np.ones((2, int(int(dim))))), requires_grad=attention
-        )
+        self.coefficient_4_3 = nn.Parameter(torch.Tensor(np.ones((2, int(int(dim * 2 * 4))))), requires_grad=attention)
+        self.coefficient_3_2 = nn.Parameter(torch.Tensor(np.ones((2, int(int(dim * 2 * 2))))), requires_grad=attention)
+        self.coefficient_2_1 = nn.Parameter(torch.Tensor(np.ones((2, int(int(dim * 2))))), requires_grad=attention)
+        self.coefficient_1_0 = nn.Parameter(torch.Tensor(np.ones((2, int(int(dim))))), requires_grad=attention)
 
         ### skip then conv 1x1
-        self.skip_4_3 = nn.Conv2d(
-            int(int(dim * 2 * 4)), int(int(dim * 2 * 4)), kernel_size=1, bias=bias
-        )
-        self.skip_3_2 = nn.Conv2d(
-            int(int(dim * 2 * 2)), int(int(dim * 2 * 2)), kernel_size=1, bias=bias
-        )
+        self.skip_4_3 = nn.Conv2d(int(int(dim * 2 * 4)), int(int(dim * 2 * 4)), kernel_size=1, bias=bias)
+        self.skip_3_2 = nn.Conv2d(int(int(dim * 2 * 2)), int(int(dim * 2 * 2)), kernel_size=1, bias=bias)
         self.skip_2_1 = nn.Conv2d(int(int(dim * 2)), int(int(dim * 2)), kernel_size=1, bias=bias)
         self.skip_1_0 = nn.Conv2d(int(int(dim * 2)), int(int(dim * 2)), kernel_size=1, bias=bias)
 
@@ -540,10 +519,23 @@ class LLFormer(nn.Module):
         self.layer_fussion_2 = LAM_Module_v2(in_dim=int(dim * 3))
         self.conv_fuss_2 = nn.Conv2d(int(dim * 3), int(dim), kernel_size=1, bias=bias)
 
-        self.output = nn.Conv2d(
-            int(dim), out_channels, kernel_size=3, stride=1, padding=1, bias=bias
-        )
+        self.output = nn.Conv2d(int(dim), out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
         self.skip = skip
+
+        if weights:
+            self.load_checkpoint(weights, device)
+
+    def load_checkpoint(self, weights, device):
+        checkpoint = torch.load(weights, map_location=device)
+        try:
+            self.load_state_dict(checkpoint["state_dict"])
+        except Exception:
+            state_dict = checkpoint["state_dict"]
+            new_state_dict = OrderedDict()
+            for k, v in state_dict.items():
+                name = k[7:]
+                new_state_dict[name] = v
+            self.load_state_dict(new_state_dict)
 
     def forward(self, inp_img):
         inp_enc_encoder1 = self.patch_embed(inp_img)
@@ -578,8 +570,7 @@ class LLFormer(nn.Module):
         out_enc_level4_0 = self.up4_3(out_enc_level4_0)
 
         inp_enc_level3_1 = (
-            self.coefficient_4_3[0, :][None, :, None, None] * out_enc_level3_0
-            + self.coefficient_4_3[1, :][None, :, None, None] * out_enc_level4_0
+            self.coefficient_4_3[0, :][None, :, None, None] * out_enc_level3_0 + self.coefficient_4_3[1, :][None, :, None, None] * out_enc_level4_0
         )
         inp_enc_level3_1 = self.skip_4_3(inp_enc_level3_1)  ### conv 1x1
 
@@ -587,8 +578,7 @@ class LLFormer(nn.Module):
 
         out_enc_level3_1 = self.up3_2(out_enc_level3_1)
         inp_enc_level2_1 = (
-            self.coefficient_3_2[0, :][None, :, None, None] * out_enc_level2_0
-            + self.coefficient_3_2[1, :][None, :, None, None] * out_enc_level3_1
+            self.coefficient_3_2[0, :][None, :, None, None] * out_enc_level2_0 + self.coefficient_3_2[1, :][None, :, None, None] * out_enc_level3_1
         )
         inp_enc_level2_1 = self.skip_3_2(inp_enc_level2_1)  ### conv 1x1
 
@@ -597,8 +587,7 @@ class LLFormer(nn.Module):
         out_enc_level2_1 = self.up2_1(out_enc_level2_1)
 
         inp_enc_level1_1 = (
-            self.coefficient_2_1[0, :][None, :, None, None] * out_enc_level1_0
-            + self.coefficient_2_1[1, :][None, :, None, None] * out_enc_level2_1
+            self.coefficient_2_1[0, :][None, :, None, None] * out_enc_level1_0 + self.coefficient_2_1[1, :][None, :, None, None] * out_enc_level2_1
         )
 
         inp_enc_level1_1 = self.skip_1_0(inp_enc_level1_1)  ### conv 1x1
@@ -609,10 +598,7 @@ class LLFormer(nn.Module):
 
         out_fusion_123 = self.latent(out_fusion_123)
 
-        out = (
-            self.coefficient_1_0[0, :][None, :, None, None] * out_fusion_123
-            + self.coefficient_1_0[1, :][None, :, None, None] * out_enc_level1_1
-        )
+        out = self.coefficient_1_0[0, :][None, :, None, None] * out_fusion_123 + self.coefficient_1_0[1, :][None, :, None, None] * out_enc_level1_1
 
         out_1 = self.refinement_1(out)
 

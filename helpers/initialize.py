@@ -5,8 +5,6 @@ import torch
 import cv2
 import onnx
 
-from models.LLFormer import LLFormer
-
 
 def init_video_writer(cap, output_path: str):
     fps = int(cap.get(cv2.CAP_PROP_FPS))
@@ -49,7 +47,7 @@ def init_llie_onnx_model(onnx_path: str) -> onnx.ModelProto:
         onnx_model = onnx.load(onnx_path)
         onnx.checker.check_model(onnx_model)
 
-        return onnx_model
+        return onnx_path
 
     except Exception as e:
         raise RuntimeError(f"Failed to load model: {str(e)}")

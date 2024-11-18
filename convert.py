@@ -1,33 +1,23 @@
-from collections import OrderedDict
-
 import torch
 
+from models.SCI import Finetunemodel
 from models.LLFormer import LLFormer
 
-WIDTH = 640
-HEIGHT = 360
-BATCH_SIZE = 16
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+WIDTH = 360
+HEIGHT = 640
+BATCH_SIZE = 8
+DEVICE = torch.device("cpu")
 
 MODEL_LLIE_PATH = "weights/LLFormer/model_bestPSNR.pth"
 MODEL_LLIE_ONNX_PATH = "ONNX/LLFormer/LLFormer.onnx"
 
 
-def load_checkpoint(model, weights):
-    checkpoint = torch.load(weights)
-    try:
-        model.load_state_dict(checkpoint["state_dict"])
-    except Exception:
-        state_dict = checkpoint["state_dict"]
-        new_state_dict = OrderedDict()
-        for k, v in state_dict.items():
-            name = k[7:]
-            new_state_dict[name] = v
-        model.load_state_dict(new_state_dict)
-
-
 def convert_to_onnx(model_path: str, onnx_path: str):
     try:
+        # model = Finetunemodel(
+        #     model_path,
+        #     DEVICE,
+        # )
         model = LLFormer(
             inp_channels=3,
             out_channels=3,
@@ -40,9 +30,11 @@ def convert_to_onnx(model_path: str, onnx_path: str):
             LayerNorm_type="WithBias",
             attention=True,
             skip=False,
+            weights=model_path,
+            device=DEVICE,
         )
+
         model.to(DEVICE)
-        load_checkpoint(model, model_path)
         model.eval()
 
         input = torch.randn(BATCH_SIZE, 3, WIDTH, HEIGHT, requires_grad=True).to(DEVICE)
