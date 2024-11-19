@@ -6,8 +6,8 @@ from helpers.process import process_video
 if __name__ == "__main__":
     INPUT_VIDEO = "stock.mp4"
     OUTPUT_VIDEO = "stock_tracked.mp4"
-    MODEL_POSE_PATH = "weights/YOLO/yolo11n-pose.pt"
-    CONFIDENCE_THRESHOLD = 0.25
+    MODEL_POSE_PATH = "weights/YOLO/yolov8n-pose.pt"
+    CONFIDENCE_THRESHOLD = 0.3
     BATCH_SIZE = 16
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 

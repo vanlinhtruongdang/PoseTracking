@@ -120,12 +120,12 @@ class Finetunemodel(nn.Module):
         self.enhance = EnhanceNetwork(layers=1, channels=3)
         self._criterion = LossFunction()
 
-        base_weights = torch.load(weights)
+        base_weights = torch.load(weights, map_location=device)
         pretrained_dict = base_weights
         model_dict = self.state_dict()
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
         model_dict.update(pretrained_dict)
-        self.load_state_dict(model_dict, map_location=device)
+        self.load_state_dict(model_dict)
 
     def weights_init(self, m):
         if isinstance(m, nn.Conv2d):

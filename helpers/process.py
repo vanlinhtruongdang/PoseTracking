@@ -45,6 +45,7 @@ def process_video(
     out = init_video_writer(cap, output_path)
 
     LLIE_onnx_model = init_llie_onnx_model(model_llie_onnx_path)
+    # LLIE_onnx_model = None
     YOLO_model = init_pose_model(model_pose_path)
 
     try:
