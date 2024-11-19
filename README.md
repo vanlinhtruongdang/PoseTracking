@@ -1,2 +1,2 @@
 # PoseTracking
-Project of pose tracking using YOLOv11 and LLFormer.
+Project of pose tracking using YOLOv11 and SCI LLIE.
