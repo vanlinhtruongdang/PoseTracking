@@ -1,38 +1,30 @@
 import torch
+from models.LIT.LITNet import LYT
+from models.CID.CIDNet import CIDNet
 
-from models.SCI import Finetunemodel
-from models.LLFormer import LLFormer
-
-WIDTH = 480
-HEIGHT = 586
+WIDTH = 240
+HEIGHT = 480
 BATCH_SIZE = 32
 DEVICE = torch.device("cpu")
 
-MODEL_LLIE_PATH = "weights/SCI/difficult.pt"
-MODEL_LLIE_ONNX_PATH = "ONNX/SCI/SCI.onnx"
+MODEL_LLIE_PATH = "weights/LYT/LOLv2S.pth"
+MODEL_LLIE_ONNX_PATH = "ONNX/LYT/LYT.onnx"
+# MODEL_LLIE_PATH = "weights/CID/CID.pth"
+# MODEL_LLIE_ONNX_PATH = "ONNX/CID/CID.onnx"
 
 
-def convert_to_onnx(model_path: str, onnx_path: str):
+def pytorch_to_onnx(model_path: str, onnx_path: str):
     try:
-        model = Finetunemodel(
-            model_path,
-            DEVICE,
-        )
-        # model = LLFormer(
-        #     inp_channels=3,
-        #     out_channels=3,
-        #     dim=16,
-        #     num_blocks=[2, 4, 8, 16],
-        #     num_refinement_blocks=2,
-        #     heads=[1, 2, 4, 8],
-        #     ffn_expansion_factor=2.66,
-        #     bias=False,
-        #     LayerNorm_type="WithBias",
-        #     attention=True,
-        #     skip=False,
-        #     weights=model_path,
-        #     device=DEVICE,
-        # )
+        if "CID" in model_path:
+            model = CIDNet(
+                weight=model_path,
+                device=DEVICE,
+            )
+        elif "LYT" in model_path:
+            model = LYT(
+                weight=model_path,
+                device=DEVICE,
+            )
 
         model.to(DEVICE)
         model.eval()
@@ -53,11 +45,11 @@ def convert_to_onnx(model_path: str, onnx_path: str):
             },
         )
 
-        print(f"Successfully export LLFormer to ONNX format: {onnx_path}")
+        print(f"Successfully export model to ONNX format: {onnx_path}")
 
     except Exception as e:
         raise RuntimeError(f"Failed to load model: {str(e)}")
 
 
 if __name__ == "__main__":
-    convert_to_onnx(MODEL_LLIE_PATH, MODEL_LLIE_ONNX_PATH)
+    pytorch_to_onnx(MODEL_LLIE_PATH, MODEL_LLIE_ONNX_PATH)

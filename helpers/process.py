@@ -1,5 +1,6 @@
 import gc
 import time
+import numpy as np
 import torch
 import cv2
 from tqdm import tqdm
@@ -8,17 +9,31 @@ from helpers.initialize import init_llie_onnx_model, init_pose_model, init_video
 from helpers.llie import enhance_images
 
 
+def resize_frame(frame, target_size=(256, 256)):
+    return cv2.resize(frame, target_size, interpolation=cv2.INTER_AREA)
+
+
 def process_frame_batch(
     pose_model,
     frames,
+    original_size,
     llie_model=None,
     device=None,
     conf_thres=0.25,
 ):
-    enhanced_frames = enhance_images(llie_model, frames) if llie_model else None
+    if llie_model:
+        # Resize to 256x256 for enhancement
+        small_frames = [resize_frame(frame) for frame in frames]
+        # Enhance the small frames
+        enhanced_small_frames = enhance_images(llie_model, small_frames)
+        # Resize back to original size
+        enhanced_frames = [cv2.resize(frame, (original_size[1], original_size[0]), interpolation=cv2.INTER_LINEAR) for frame in enhanced_small_frames]
+        process_frames = enhanced_frames
+    else:
+        process_frames = frames
 
     results = pose_model.predict(
-        enhanced_frames if enhanced_frames else frames,
+        process_frames,
         device=device,
         conf=conf_thres,
         save=False,
@@ -42,10 +57,11 @@ def process_video(
     cap = cv2.VideoCapture(input_path)
     if not cap.isOpened():
         raise RuntimeError(f"Failed to open video file: {input_path}")
-    out = init_video_writer(cap, output_path)
+    fps, width, height, out = init_video_writer(cap, output_path)
+    original_size = (height, width)  # OpenCV uses (height, width) for frame shape
 
-    LLIE_onnx_model = init_llie_onnx_model(model_llie_onnx_path)
-    # LLIE_onnx_model = None
+    # LLIE_onnx_model = init_llie_onnx_model(model_llie_onnx_path)
+    LLIE_onnx_model = None
     YOLO_model = init_pose_model(model_pose_path)
 
     try:
@@ -70,6 +86,7 @@ def process_video(
                 results = process_frame_batch(
                     YOLO_model,
                     frame_buffer,
+                    original_size,
                     LLIE_onnx_model,
                     device,
                     conf_thres,
@@ -79,10 +96,6 @@ def process_video(
                     annotated_frame = result.plot()
                     out.write(annotated_frame)
                     del annotated_frame
-
-                    # cv2.imshow("Pose Estimation", annotated_frame)
-                    # if cv2.waitKey(1) & 0xFF == ord("q"):
-                    #     return
 
                 batch_time = time.time() - start_time
                 frame_times.append(batch_time / len(frame_buffer))
@@ -103,7 +116,6 @@ def process_video(
     finally:
         cap.release()
         out.release()
-        # cv2.destroyAllWindows()
 
         if frame_times:
             avg_fps = 1.0 / (sum(frame_times) / len(frame_times))

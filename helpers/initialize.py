@@ -18,7 +18,7 @@ def init_video_writer(cap, output_path: str):
     except Exception:
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
 
-    return cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    return fps, width, height, cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
 
 def init_pose_model(model_path: str) -> YOLO:
