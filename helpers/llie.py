@@ -13,9 +13,9 @@ def to_numpy(tensor):
 
 
 def enhance_images(model, images):
-    enhanced_images = []
+    images_numpy = np.stack([np.array(img).astype(np.float32) / 255.0 for img in images])
 
-    inputs = torch.stack([TF.to_tensor(img) for img in images]).cuda()
+    inputs = torch.from_numpy(images_numpy).permute(0, 3, 1, 2).cuda()
 
     ort_session = ort.InferenceSession(
         model,
@@ -35,6 +35,7 @@ def enhance_images(model, images):
     ort_outs = ort_session.run(None, ort_inputs)[0]
     ort_outs = np.transpose(ort_outs, (0, 2, 3, 1))
 
+    enhanced_images = []
     for img in ort_outs:
         img = np.ascontiguousarray(img)
         img = np.clip(img * 255, 0, 255).astype(np.uint8)

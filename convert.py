@@ -2,12 +2,12 @@ import torch
 from models.LIT.LITNet import LYT
 from models.CID.CIDNet import CIDNet
 
-WIDTH = 240
-HEIGHT = 480
-BATCH_SIZE = 32
+WIDTH = int(1080 / 3)
+HEIGHT = int(1920 / 3)
+BATCH_SIZE = 8
 DEVICE = torch.device("cpu")
 
-MODEL_LLIE_PATH = "weights/LYT/LOLv2S.pth"
+MODEL_LLIE_PATH = "weights/LYT/LOLv1.pth"
 MODEL_LLIE_ONNX_PATH = "ONNX/LYT/LYT.onnx"
 # MODEL_LLIE_PATH = "weights/CID/CID.pth"
 # MODEL_LLIE_ONNX_PATH = "ONNX/CID/CID.onnx"
